@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✈️ Rastreador de Vuelos</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#070b14; --surface:#0f1624; --surface2:#162032; --surface3:#1c2a40;
+  --border:#1e3050; --border2:#243858;
+  --accent:#00d4ff; --accent2:#ff6b35; --accent3:#7fff6b; --gold:#ffd700;
+  --text:#e8f0fe; --muted:#5a7296; --muted2:#8ba3c4;
+  --success:#2ed573; --glow:0 0 30px rgba(0,212,255,0.2);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    radial-gradient(1px 1px at 8% 12%,rgba(255,255,255,.55) 0%,transparent 100%),
+    radial-gradient(1px 1px at 22% 38%,rgba(0,212,255,.35) 0%,transparent 100%),
+    radial-gradient(1px 1px at 48% 68%,rgba(255,255,255,.45) 0%,transparent 100%),
+    radial-gradient(1px 1px at 73% 18%,rgba(127,255,107,.25) 0%,transparent 100%),
+    radial-gradient(1px 1px at 88% 58%,rgba(255,255,255,.35) 0%,transparent 100%),
+    radial-gradient(2px 2px at 33% 82%,rgba(0,212,255,.25) 0%,transparent 100%),
+    radial-gradient(1px 1px at 58% 8%,rgba(255,107,53,.35) 0%,transparent 100%),
+    radial-gradient(1px 1px at 15% 55%,rgba(255,255,255,.3) 0%,transparent 100%),
+    radial-gradient(1px 1px at 65% 42%,rgba(0,212,255,.2) 0%,transparent 100%)
+}
+.orb{position:fixed;border-radius:50%;filter:blur(100px);opacity:.08;pointer-events:none;z-index:0;animation:float 10s ease-in-out infinite}
+.orb1{width:600px;height:600px;background:var(--accent);top:-250px;left:-200px}
+.orb2{width:500px;height:500px;background:var(--accent2);bottom:-200px;right:-150px;animation-delay:-5s}
+.orb3{width:350px;height:350px;background:var(--accent3);top:40%;left:45%;animation-delay:-2.5s}
+@keyframes float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-40px) scale(1.06)}}
+.container{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:24px 20px 60px}
+
+/* ── Header ── */
+header{text-align:center;padding:48px 0 36px}
+.logo-badge{display:inline-flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:7px 18px;font-size:11px;color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-bottom:22px}
+h1{font-family:'Syne',sans-serif;font-size:clamp(2rem,5vw,3.4rem);font-weight:800;line-height:1.1;margin-bottom:10px;background:linear-gradient(135deg,#fff 0%,var(--accent) 50%,var(--accent3) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{color:var(--muted);font-size:13px;letter-spacing:1px}
+
+/* ── Search Panel ── */
+.search-panel{background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:28px;margin-bottom:28px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.sp-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.sp-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.trip-row{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.trip-pill{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:100px;padding:7px 18px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;transition:all .2s}
+.trip-pill.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+.trip-pill:hover:not(.active){border-color:var(--accent);color:var(--accent)}
+
+/* Route row */
+.route-row{display:grid;grid-template-columns:1fr 48px 1fr;gap:10px;align-items:end;margin-bottom:16px}
+.swap-btn{width:48px;height:46px;background:var(--surface3);border:1px solid var(--border2);border-radius:50%;color:var(--accent);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s;flex-shrink:0;align-self:flex-end}
+.swap-btn:hover{background:var(--accent);color:#000;transform:rotate(180deg)}
+
+/* Date row */
+.date-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.date-row.one-way{grid-template-columns:1fr}
+
+/* ── LAYOVER SECTION ── */
+.layover-section{margin-bottom:20px}
+.layover-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap}
+.layover-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted2)}
+.layover-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.layover-grid.one-col{grid-template-columns:1fr}
+
+.layover-card{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:16px;transition:all .2s;position:relative;overflow:hidden}
+.layover-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--border);border-radius:4px 0 0 4px;transition:background .2s}
+.layover-card.active-card{border-color:rgba(0,212,255,.25)}
+.layover-card.active-card::before{background:var(--accent)}
+.layover-card.return-card.active-card::before{background:var(--accent2)}
+
+.lc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.lc-label{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.lc-label .leg-icon{font-size:14px}
+
+/* Toggle switch */
+.sw{position:relative;width:36px;height:20px;flex-shrink:0}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw-track{position:absolute;inset:0;background:var(--border);border-radius:100px;cursor:pointer;transition:background .2s}
+.sw input:checked~.sw-track{background:var(--accent)}
+.sw-thumb{position:absolute;width:14px;height:14px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s;pointer-events:none}
+.sw input:checked~.sw-track .sw-thumb{transform:translateX(16px)}
+.return-sw input:checked~.sw-track{background:var(--accent2)}
+
+.lc-body{display:none}
+.lc-body.open{display:block}
+
+.lc-route-preview{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:12px;background:var(--surface3);border-radius:8px;padding:8px 12px}
+.lc-route-preview .pr-code{font-family:'Syne',sans-serif;font-weight:800;font-size:13px;color:var(--text)}
+.lc-route-preview .pr-arr{color:var(--muted)}
+
+/* Field */
+.field-label{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;display:block}
+.field-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 14px 11px 40px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;transition:all .2s;appearance:none;-webkit-appearance:none}
+.field-input.no-icon{padding-left:14px}
+.field-input.sm{padding:10px 14px 10px 38px;font-size:12px}
+.field-input.sm.no-icon{padding-left:14px}
+.field-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1);background:var(--surface2)}
+.layover-card.return-card .field-input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(255,107,53,.1)}
+input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) saturate(5) hue-rotate(175deg);cursor:pointer;opacity:.6}
+input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
+
+/* layover sub-grid */
+.lc-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.lc-fields.full{grid-template-columns:1fr}
+
+/* Autocomplete */
+.ac-wrap{position:relative}
+.dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:12px;max-height:200px;overflow-y:auto;z-index:300;box-shadow:0 16px 40px rgba(0,0,0,.6);display:none}
+.dropdown.open{display:block}
+.dd-item{padding:9px 13px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .15s;font-size:12px;border-bottom:1px solid var(--border)}
+.dd-item:last-child{border-bottom:none}
+.dd-item:hover{background:var(--surface3)}
+.dd-item.sel{background:rgba(0,212,255,.08)}
+.dd-flag{font-size:18px;flex-shrink:0}
+.dd-info{flex:1}
+.dd-name{color:var(--text);font-weight:500;font-size:12px}
+.dd-airports{font-size:10px;color:var(--muted);margin-top:1px}
+.dd-code{font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--accent)}
+
+/* Layover duration */
+.lc-dur-row{display:flex;align-items:center;gap:8px;margin-top:10px}
+.lc-dur-label{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+.dur-select{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none;flex:1;appearance:none;-webkit-appearance:none;cursor:pointer}
+.dur-select:focus{border-color:var(--accent)}
+.layover-card.return-card .dur-select:focus{border-color:var(--accent2)}
+
+/* Layover badge pill */
+.lyr-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:100px;padding:3px 10px;font-size:10px;color:var(--accent);letter-spacing:1px;font-weight:600}
+.lyr-badge.ret{background:rgba(255,107,53,.1);border-color:rgba(255,107,53,.2);color:var(--accent2)}
+
+/* Search buttons */
+.search-btn-row{display:flex;gap:12px;align-items:center}
+.btn-search{flex:1;background:linear-gradient(135deg,var(--accent),#0099cc);color:#000;border:none;border-radius:12px;padding:15px 28px;font-family:'Syne',sans-serif;font-weight:800;font-size:14px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-search:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,212,255,.4)}
+.btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:14px 20px;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn:hover{border-color:var(--border2);background:var(--surface3)}
+
+/* ── Status bar ── */
+.status-bar{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 20px;margin-bottom:24px;gap:12px;flex-wrap:wrap}
+.si{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sval{color:var(--accent);font-weight:500}
+.tog-wrap{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.tog{width:36px;height:20px;background:var(--border);border-radius:100px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.tog.on{background:var(--accent)}
+.tog::after{content:'';position:absolute;width:14px;height:14px;background:white;border-radius:50%;top:3px;left:3px;transition:transform .2s}
+.tog.on::after{transform:translateX(16px)}
+
+/* ── Route strip ── */
+.route-strip{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 20px;display:none;align-items:center;gap:16px;margin-bottom:20px;font-size:13px;flex-wrap:wrap}
+.route-strip.vis{display:flex}
+.rs-flag{font-size:20px}
+.rs-code{font-family:'Syne',sans-serif;font-weight:800;font-size:16px}
+.rs-arr{color:var(--muted);font-size:16px}
+.rs-sep{width:1px;height:24px;background:var(--border)}
+.rs-info{font-size:11px;color:var(--muted);line-height:1.6}
+.rs-info span{color:var(--text)}
+
+/* ── Best deal ── */
+.best-deal{background:linear-gradient(135deg,rgba(0,212,255,.04),rgba(127,255,107,.04));border:1px solid rgba(0,212,255,.25);border-radius:18px;padding:24px;margin-bottom:24px;position:relative;overflow:hidden;display:none}
+.best-deal::before{content:'✨ MEJOR PRECIO';position:absolute;top:14px;right:16px;background:var(--gold);color:#000;font-family:'Syne',sans-serif;font-weight:800;font-size:10px;letter-spacing:2px;padding:4px 12px;border-radius:100px}
+.bd-price{font-family:'Syne',sans-serif;font-size:clamp(2.5rem,6vw,4rem);font-weight:800;color:var(--accent3);line-height:1}
+.bd-price sup{font-size:1.4rem;color:var(--muted)}
+.bd-chips{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px}
+.bdc{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.bdc span{color:var(--text);font-weight:500}
+
+/* ── Tabs ── */
+.tabs{display:none;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:18px}
+.tabs.vis{display:flex}
+.tab{flex:1;text-align:center;padding:8px;font-size:11px;border-radius:7px;cursor:pointer;transition:all .2s;color:var(--muted);letter-spacing:1px;font-family:'Syne',sans-serif;font-weight:600;text-transform:uppercase}
+.tab.active{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+
+/* ── Flight cards ── */
+.flights-grid{display:grid;gap:10px}
+.flight-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:0;transition:all .2s;cursor:pointer;position:relative;overflow:hidden}
+.flight-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--border);transition:background .2s}
+.flight-card:hover{border-color:rgba(0,212,255,.3);box-shadow:var(--glow)}
+.flight-card:hover::before{background:var(--accent)}
+.flight-card.cheapest::before{background:var(--accent3)}
+.flight-card.cheapest{border-color:rgba(127,255,107,.18)}
+
+/* Card inner: outbound leg */
+.fc-leg{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:14px;padding:16px 22px}
+.fc-leg+.fc-leg{border-top:1px dashed var(--border);background:rgba(255,107,53,.02)}
+.leg-divider{display:flex;align-items:center;gap:10px;padding:0 22px;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2);padding-top:6px;padding-bottom:6px}
+.leg-divider::before,.leg-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.al-icon{width:44px;height:44px;border-radius:11px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.fc-top{display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap}
+.al-name{font-family:'Syne',sans-serif;font-weight:700;font-size:12px}
+.badge{display:inline-flex;align-items:center;font-size:9px;padding:2px 7px;border-radius:100px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.bb{background:rgba(127,255,107,.15);color:var(--accent3)}
+.bn{background:rgba(0,212,255,.15);color:var(--accent)}
+.bh{background:rgba(255,107,53,.15);color:var(--accent2)}
+.fc-route{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.fc-code{font-family:'Syne',sans-serif;font-weight:800;font-size:14px}
+.rl-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
+.r-dots{display:flex;align-items:center;gap:3px;width:100%}
+.r-dot{width:5px;height:5px;border-radius:50%;background:var(--border);flex-shrink:0}
+.r-line{flex:1;height:1px;background:var(--border)}
+.r-stops{font-size:10px;color:var(--muted);letter-spacing:.3px}
+.fc-meta{font-size:10px;color:var(--muted)}
+.fc-meta span{color:var(--muted2)}
+.layover-tag{display:inline-flex;align-items:center;gap:4px;font-size:9px;background:rgba(0,212,255,.08);color:var(--accent);border:1px solid rgba(0,212,255,.15);border-radius:100px;padding:2px 7px;margin-top:4px;font-weight:600;letter-spacing:.5px}
+.layover-tag.ret-tag{background:rgba(255,107,53,.08);color:var(--accent2);border-color:rgba(255,107,53,.15)}
+
+.fc-right{text-align:right;flex-shrink:0}
+.fc-price{font-family:'Syne',sans-serif;font-weight:800;font-size:20px}
+.pl{color:var(--accent3)} .pm{color:var(--gold)} .ph{color:var(--accent2)}
+.fc-plabel{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+.book-btn{background:var(--surface2);border:1px solid var(--border);color:var(--accent);border-radius:8px;padding:6px 12px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all .15s;margin-top:7px;white-space:nowrap;display:inline-block}
+.book-btn:hover{background:var(--accent);color:#000;border-color:var(--accent)}
+
+/* ── Chart & sections ── */
+.sec-title{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.chart-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;height:140px;position:relative;overflow:hidden}
+.hist-sec{margin-top:24px;display:none}
+.hist-sec.vis{display:block}
+
+/* ── Alert & WA ── */
+.alert-sec{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;margin-top:24px;display:none}
+.alert-sec.vis{display:block}
+.alert-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.alert-title em{color:var(--accent);font-style:normal}
+.alert-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end}
+.phint{font-size:11px;color:var(--muted);margin-top:6px}
+.field-input-plain{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;transition:all .2s}
+.field-input-plain:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
+.wa-box{background:linear-gradient(135deg,rgba(37,211,102,.04),rgba(18,140,126,.04));border:1px solid rgba(37,211,102,.18);border-radius:18px;padding:24px;margin-top:14px;display:none}
+.wa-box.vis{display:block}
+.wa-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.wa-ico{width:40px;height:40px;background:#25D366;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.wa-t{font-family:'Syne',sans-serif;font-weight:700;font-size:15px}
+.wa-s{font-size:12px;color:var(--muted);margin-top:2px}
+.wa-phone{background:var(--surface2);border:1px solid rgba(37,211,102,.2);border-radius:10px;padding:12px 16px;font-size:15px;color:#25D366;font-weight:500;display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.wa-actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn-wa{background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;border-radius:10px;padding:12px 20px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px}
+.btn-wa:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(37,211,102,.35)}
+
+/* Countdown */
+.cd-box{text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-top:24px;display:none}
+.cd-box.vis{display:block}
+.countdown{font-family:'DM Mono',monospace;font-size:30px;font-weight:500;color:var(--accent);letter-spacing:5px}
+.cd-lbl{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+
+/* Loading & toast */
+.loading{display:flex;align-items:center;justify-content:center;gap:12px;padding:48px;color:var(--muted);font-size:13px}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 20px;font-size:13px;z-index:1000;transform:translateY(100px);opacity:0;transition:all .3s;max-width:340px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-color:var(--success)}
+.toast.whatsapp{border-color:#25D366}
+
+footer{text-align:center;padding:36px 0 20px;color:var(--muted);font-size:11px;line-height:2;border-top:1px solid var(--border);margin-top:40px}
+footer a{color:var(--accent);text-decoration:none}
+
+@media(max-width:700px){
+  .route-row{grid-template-columns:1fr}.swap-btn{display:none}
+  .date-row,.layover-grid,.alert-grid,.lc-fields{grid-template-columns:1fr}
+  .flight-card .fc-leg{grid-template-columns:36px 1fr}.fc-right{display:none}
+  .wa-actions{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div>
+
+<div class="container">
+
+<!-- Header -->
+<header>
+  <div class="logo-badge" id="logoBadge">✈ Rastreador de Vuelos Inteligente</div>
+  <h1>Encuentra los<br>Mejores Precios</h1>
+  <p class="subtitle">Busca · Compara · Escalas personalizadas · Alertas por WhatsApp</p>
+</header>
+
+<!-- ══ SEARCH PANEL ══ -->
+<div class="search-panel">
+  <div class="sp-title">🔍 Configurar búsqueda</div>
+
+  <!-- Trip type -->
+  <div class="trip-row">
+    <button class="trip-pill active" onclick="setTrip('round',this)">↔ Ida y vuelta</button>
+    <button class="trip-pill" onclick="setTrip('one',this)">→ Solo ida</button>
+  </div>
+
+  <!-- Origin / Destination -->
+  <div class="route-row">
+    <div>
+      <label class="field-label">🛫 País / ciudad de salida</label>
+      <div class="ac-wrap">
+        <input class="field-input no-icon" id="originInput" type="text" placeholder="Guatemala..." autocomplete="off"
+          oninput="filterC('o')" onfocus="openDD('o')" onblur="closeDD('o',200)">
+        <div class="dropdown" id="originDD"></div>
+      </div>
+    </div>
+    <button class="swap-btn" onclick="swapRoute()" title="Intercambiar">⇄</button>
+    <div>
+      <label class="field-label">🛬 País / ciudad de destino</label>
+      <div class="ac-wrap">
+        <input class="field-input no-icon" id="destInput" type="text" placeholder="Chile..." autocomplete="off"
+          oninput="filterC('d')" onfocus="openDD('d')" onblur="closeDD('d',200)">
+        <div class="dropdown" id="destDD"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dates -->
+  <div class="date-row" id="dateRow">
+    <div>
+      <label class="field-label">📅 Fecha de salida</label>
+      <input class="field-input no-icon" id="departDate" type="date" onchange="validateDates(); syncLyrDates()">
+    </div>
+    <div id="returnDateField">
+      <label class="field-label">📅 Fecha de regreso</label>
+      <input class="field-input no-icon" id="returnDate" type="date" onchange="validateDates(); syncLyrDates()">
+    </div>
+  </div>
+
+  <!-- ══ LAYOVER SECTION ══ -->
+  <div class="layover-section">
+    <div class="layover-header">
+      <div class="layover-title">🔀 Escalas personalizadas</div>
+    </div>
+
+    <div class="layover-grid" id="layoverGrid">
+
+      <!-- OUTBOUND LAYOVER -->
+      <div class="layover-card" id="lyrOutCard">
+        <div class="lc-header">
+          <div class="lc-label"><span class="leg-icon">✈</span> Escala en ida</div>
+          <label class="sw">
+            <input type="checkbox" id="lyrOutToggle" onchange="toggleLayover('out')">
+            <div class="sw-track"><div class="sw-thumb"></div></div>
+          </label>
+        </div>
+        <div class="lc-body" id="lyrOutBody">
+          <div class="lc-route-preview" id="lyrOutPreview">
+            <span class="pr-code" id="lyrOutFrom">GUA</span>
+            <span class="pr-arr">→</span>
+            <span style="font-size:13px">🔀</span>
+            <span class="pr-arr">→</span>
+            <span class="pr-code" id="lyrOutTo">SCL</span>
+          </div>
+          <label class="field-label">Ciudad / aeropuerto de escala</label>
+          <div class="ac-wrap">
+            <input class="field-input no-icon sm" id="lyrOutInput" type="text" placeholder="Bogotá, Panamá, Lima..." autocomplete="off"
+              oninput="filterLayover('out')" onfocus="openLyrDD('out')" onblur="closeLyrDD('out',200)">
+            <div class="dropdown" id="lyrOutDD"></div>
+          </div>
+          <div class="lc-dur-row">
+            <span class="lc-dur-label">⏳ Tiempo de escala</span>
+            <select class="dur-select" id="lyrOutDur">
+              <option value="1h30m">1h 30min</option>
+              <option value="2h">2h</option>
+              <option value="3h" selected>3h</option>
+              <option value="4h">4h</option>
+              <option value="6h">6h</option>
+              <option value="8h">8h</option>
+              <option value="12h">12h</option>
+              <option value="24h">24h (stopover)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- RETURN LAYOVER -->
+      <div class="layover-card return-card" id="lyrRetCard">
+        <div class="lc-header">
+          <div class="lc-label"><span class="leg-icon">↩</span> Escala en regreso</div>
+          <label class="sw return-sw">
+            <input type="checkbox" id="lyrRetToggle" onchange="toggleLayover('ret')">
+            <div class="sw-track"><div class="sw-thumb"></div></div>
+          </label>
+        </div>
+        <div class="lc-body" id="lyrRetBody">
+          <div class="lc-route-preview" id="lyrRetPreview">
+            <span class="pr-code" id="lyrRetFrom">SCL</span>
+            <span class="pr-arr">→</span>
+            <span style="font-size:13px">🔀</span>
+            <span class="pr-arr">→</span>
+            <span class="pr-code" id="lyrRetTo">GUA</span>
+          </div>
+          <label class="field-label">Ciudad / aeropuerto de escala</label>
+          <div class="ac-wrap">
+            <input class="field-input no-icon sm" id="lyrRetInput" type="text" placeholder="Bogotá, Panamá, Lima..." autocomplete="off"
+              oninput="filterLayover('ret')" onfocus="openLyrDD('ret')" onblur="closeLyrDD('ret',200)">
+            <div class="dropdown" id="lyrRetDD"></div>
+          </div>
+          <div class="lc-dur-row">
+            <span class="lc-dur-label">⏳ Tiempo de escala</span>
+            <select class="dur-select" id="lyrRetDur">
+              <option value="1h30m">1h 30min</option>
+              <option value="2h">2h</option>
+              <option value="3h" selected>3h</option>
+              <option value="4h">4h</option>
+              <option value="6h">6h</option>
+              <option value="8h">8h</option>
+              <option value="12h">12h</option>
+              <option value="24h">24h (stopover)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /layover-grid -->
+  </div><!-- /layover-section -->
+
+  <!-- Search -->
+  <div class="search-btn-row">
+    <button class="btn-search" onclick="fetchFlights()">✈ Buscar vuelos</button>
+    <button class="btn" onclick="resetForm()">↺ Limpiar</button>
+  </div>
+</div><!-- /search-panel -->
+
+<!-- Status bar -->
+<div class="status-bar">
+  <div class="si"><div class="sdot"></div><span>Sistema activo</span></div>
+  <div class="si">🕐 Última búsqueda: <span class="sval" id="lastUpdate">—</span></div>
+  <div class="si">🔔 Alertas enviadas: <span class="sval" id="alertCount">0</span></div>
+  <div class="tog-wrap">Auto-actualizar<div class="tog on" id="autoTog" onclick="toggleAuto()"></div></div>
+</div>
+
+<!-- Route strip -->
+<div class="route-strip" id="routeStrip">
+  <span class="rs-flag" id="rsOF">🇬🇹</span>
+  <span class="rs-code" id="rsOC">GUA</span>
+  <span class="rs-arr">→</span>
+  <span class="rs-flag" id="rsDF">🇨🇱</span>
+  <span class="rs-code" id="rsDC">SCL</span>
+  <div class="rs-sep"></div>
+  <div class="rs-info">
+    <div>Salida: <span id="rsDep">—</span></div>
+    <div id="rsRetWrap">Regreso: <span id="rsRet">—</span></div>
+  </div>
+  <div class="rs-sep" id="rsLyrSep" style="display:none"></div>
+  <div class="rs-info" id="rsLyrInfo" style="display:none">
+    <div id="rsLyrOut"></div>
+    <div id="rsLyrRet"></div>
+  </div>
+</div>
+
+<!-- Best deal -->
+<div class="best-deal" id="bestDeal"></div>
+
+<!-- Tabs -->
+<div class="tabs" id="tabsRow">
+  <div class="tab active" onclick="switchTab('all',this)">Todos</div>
+  <div class="tab" onclick="switchTab('direct',this)">Directos</div>
+  <div class="tab" onclick="switchTab('escala',this)">Con escala</div>
+</div>
+
+<!-- Flights -->
+<div class="flights-grid" id="flightsList"></div>
+
+<!-- History -->
+<div class="hist-sec" id="histSec">
+  <div class="sec-title">Historial de precios · últimos 14 días</div>
+  <div class="chart-box"><canvas id="priceChart"></canvas></div>
+</div>
+
+<!-- Alert -->
+<div class="alert-sec" id="alertSec">
+  <div class="alert-title">⚙️ Configurar alerta <em>| WhatsApp</em></div>
+  <div class="alert-grid">
+    <div>
+      <label class="field-label">Precio máximo (USD)</label>
+      <input class="field-input-plain" type="number" id="priceThreshold" value="650" min="100" max="9999">
+      <div class="phint">Recibirás alerta cuando el precio baje de este valor</div>
+    </div>
+    <div>
+      <label class="field-label">Tu número WhatsApp</label>
+      <input class="field-input-plain" type="text" id="waNumber" value="+50243769408">
+    </div>
+    <button class="btn" onclick="saveAlert()">💾 Guardar</button>
+  </div>
+</div>
+
+<!-- WhatsApp -->
+<div class="wa-box" id="waBox">
+  <div class="wa-head">
+    <div class="wa-ico">💬</div>
+    <div><div class="wa-t">Notificación por WhatsApp</div><div class="wa-s">Alerta automática cuando el precio baje de tu umbral</div></div>
+  </div>
+  <div class="wa-phone">📱 <span id="waPhoneDisplay">+502 4376-9408</span></div>
+  <div class="wa-actions">
+    <button class="btn-wa" onclick="sendWA(false)">📲 Enviar alerta ahora</button>
+    <button class="btn" onclick="testWA()">🧪 Mensaje de prueba</button>
+    <button class="btn" onclick="copyWA()">📋 Copiar mensaje</button>
+  </div>
+</div>
+
+<!-- Countdown -->
+<div class="cd-box" id="cdBox">
+  <div class="countdown" id="countdown">24:00:00</div>
+  <div class="cd-lbl">Próxima actualización automática</div>
+  <div style="font-size:11px;color:var(--muted);margin-top:6px">Los precios se buscan automáticamente cada 24 horas</div>
+</div>
+
+<footer>
+  Precios de referencia · <a href="https://www.avianca.com" target="_blank">Avianca</a> · <a href="https://www.latamairlines.com" target="_blank">LATAM</a> · <a href="https://www.copaair.com" target="_blank">Copa Airlines</a> · <a href="https://aeromexico.com" target="_blank">Aeroméxico</a> · <a href="https://www.aa.com" target="_blank">American Airlines</a> · <a href="https://www.united.com" target="_blank">United</a><br>
+  Haz clic en "Reservar" para ir directamente a la aerolínea.<br><br>
+  <strong style="color:var(--muted)">✈️ Rastreador de vuelos inteligente 2025</strong>
+</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════
+// COUNTRIES / LAYOVER CITIES DATABASE
+// ══════════════════════════════════════════════════════════
+const COUNTRIES=[
+  {name:'Guatemala',      flag:'🇬🇹',code:'GUA',airports:'GUA, GCM',     iata:['GUA'], s:'guatemala gua gcm'},
+  {name:'Chile',          flag:'🇨🇱',code:'SCL',airports:'SCL, PMC, IQQ', iata:['SCL'], s:'chile santiago scl'},
+  {name:'México',         flag:'🇲🇽',code:'MEX',airports:'MEX, CUN, GDL', iata:['MEX'], s:'mexico mex cancun guadalajara'},
+  {name:'Colombia',       flag:'🇨🇴',code:'BOG',airports:'BOG, MDE, CLO', iata:['BOG'], s:'colombia bogota medellin'},
+  {name:'Perú',           flag:'🇵🇪',code:'LIM',airports:'LIM, CUZ',      iata:['LIM'], s:'peru lima cusco'},
+  {name:'Argentina',      flag:'🇦🇷',code:'EZE',airports:'EZE, AEP, COR', iata:['EZE'], s:'argentina buenos aires eze'},
+  {name:'Brasil',         flag:'🇧🇷',code:'GRU',airports:'GRU, GIG, BSB', iata:['GRU'], s:'brasil sao paulo rio'},
+  {name:'España',         flag:'🇪🇸',code:'MAD',airports:'MAD, BCN',      iata:['MAD'], s:'espana spain madrid barcelona'},
+  {name:'Estados Unidos', flag:'🇺🇸',code:'MIA',airports:'MIA, JFK, LAX', iata:['MIA'], s:'estados unidos usa miami new york los angeles'},
+  {name:'Panamá',         flag:'🇵🇦',code:'PTY',airports:'PTY',           iata:['PTY'], s:'panama pty'},
+  {name:'Costa Rica',     flag:'🇨🇷',code:'SJO',airports:'SJO, LIR',      iata:['SJO'], s:'costa rica san jose'},
+  {name:'Ecuador',        flag:'🇪🇨',code:'UIO',airports:'UIO, GYE',      iata:['UIO'], s:'ecuador quito guayaquil'},
+  {name:'Venezuela',      flag:'🇻🇪',code:'CCS',airports:'CCS',           iata:['CCS'], s:'venezuela caracas'},
+  {name:'Bolivia',        flag:'🇧🇴',code:'VVI',airports:'VVI, LPB',      iata:['VVI'], s:'bolivia santa cruz la paz'},
+  {name:'Uruguay',        flag:'🇺🇾',code:'MVD',airports:'MVD',           iata:['MVD'], s:'uruguay montevideo'},
+  {name:'Francia',        flag:'🇫🇷',code:'CDG',airports:'CDG, ORY',      iata:['CDG'], s:'francia france paris'},
+  {name:'Alemania',       flag:'🇩🇪',code:'FRA',airports:'FRA, MUC',      iata:['FRA'], s:'alemania germany frankfurt munich'},
+  {name:'Italia',         flag:'🇮🇹',code:'FCO',airports:'FCO, MXP',      iata:['FCO'], s:'italia italy roma milan'},
+  {name:'Canadá',         flag:'🇨🇦',code:'YYZ',airports:'YYZ, YVR',      iata:['YYZ'], s:'canada toronto vancouver'},
+  {name:'Japón',          flag:'🇯🇵',code:'NRT',airports:'NRT, HND',      iata:['NRT'], s:'japon japan tokyo'},
+  {name:'El Salvador',    flag:'🇸🇻',code:'SAL',airports:'SAL',           iata:['SAL'], s:'el salvador san salvador'},
+  {name:'Honduras',       flag:'🇭🇳',code:'TGU',airports:'TGU, SAP',      iata:['TGU'], s:'honduras tegucigalpa'},
+  {name:'Nicaragua',      flag:'🇳🇮',code:'MGA',airports:'MGA',           iata:['MGA'], s:'nicaragua managua'},
+  {name:'Cuba',           flag:'🇨🇺',code:'HAV',airports:'HAV',           iata:['HAV'], s:'cuba habana'},
+  {name:'Rep. Dominicana',flag:'🇩🇴',code:'SDQ',airports:'SDQ, PUJ',      iata:['SDQ'], s:'dominicana santo domingo punta cana'},
+  {name:'Portugal',       flag:'🇵🇹',code:'LIS',airports:'LIS, OPO',      iata:['LIS'], s:'portugal lisboa porto'},
+  {name:'Reino Unido',    flag:'🇬🇧',code:'LHR',airports:'LHR, LGW',      iata:['LHR'], s:'reino unido uk london'},
+  {name:'Países Bajos',   flag:'🇳🇱',code:'AMS',airports:'AMS',           iata:['AMS'], s:'holanda netherlands amsterdam'},
+  {name:'Emiratos Árabes',flag:'🇦🇪',code:'DXB',airports:'DXB, AUH',      iata:['DXB'], s:'emiratos dubai'},
+  {name:'China',          flag:'🇨🇳',code:'PEK',airports:'PEK, PVG, CAN', iata:['PEK'], s:'china beijing shanghai'},
+];
+
+// Extended layover cities (airports only, no full country needed)
+const LAYOVER_CITIES=[
+  {name:'Bogotá',          flag:'🇨🇴',code:'BOG',airports:'El Dorado Int.',s:'bogota bog colombia'},
+  {name:'Ciudad de Panamá',flag:'🇵🇦',code:'PTY',airports:'Tocumen Int.',  s:'panama pty ciudad'},
+  {name:'Lima',            flag:'🇵🇪',code:'LIM',airports:'Jorge Chávez',  s:'lima lim peru'},
+  {name:'Ciudad de México',flag:'🇲🇽',code:'MEX',airports:'AICM / NAIM',   s:'mexico mex ciudad'},
+  {name:'Miami',           flag:'🇺🇸',code:'MIA',airports:'Miami Int.',     s:'miami mia usa'},
+  {name:'Houston',         flag:'🇺🇸',code:'IAH',airports:'George Bush Int.',s:'houston iah usa'},
+  {name:'Dallas',          flag:'🇺🇸',code:'DFW',airports:'Dallas/Ft.Worth',s:'dallas dfw usa'},
+  {name:'Atlanta',         flag:'🇺🇸',code:'ATL',airports:'Hartsfield-Jackson',s:'atlanta atl usa'},
+  {name:'New York',        flag:'🇺🇸',code:'JFK',airports:'JFK / Newark',  s:'new york jfk ewr'},
+  {name:'Los Ángeles',     flag:'🇺🇸',code:'LAX',airports:'LAX',           s:'los angeles lax usa'},
+  {name:'Madrid',          flag:'🇪🇸',code:'MAD',airports:'Adolfo Suárez',  s:'madrid mad espana'},
+  {name:'Buenos Aires',    flag:'🇦🇷',code:'EZE',airports:'Ezeiza Int.',    s:'buenos aires eze argentina'},
+  {name:'São Paulo',       flag:'🇧🇷',code:'GRU',airports:'Guarulhos Int.', s:'sao paulo gru brasil'},
+  {name:'Quito',           flag:'🇪🇨',code:'UIO',airports:'Mariscal Sucre', s:'quito uio ecuador'},
+  {name:'San Salvador',    flag:'🇸🇻',code:'SAL',airports:'Óscar Romero',   s:'san salvador sal el salvador'},
+  {name:'San José',        flag:'🇨🇷',code:'SJO',airports:'Juan Santamaría',s:'san jose sjo costa rica'},
+  {name:'Santiago',        flag:'🇨🇱',code:'SCL',airports:'Arturo Merino B.',s:'santiago scl chile'},
+  {name:'Amsterdam',       flag:'🇳🇱',code:'AMS',airports:'Schiphol',       s:'amsterdam ams holanda'},
+  {name:'Toronto',         flag:'🇨🇦',code:'YYZ',airports:'Pearson Int.',   s:'toronto yyz canada'},
+  {name:'Cancún',          flag:'🇲🇽',code:'CUN',airports:'Cancún Int.',    s:'cancun cun mexico'},
+];
+
+// ══ STATE ══
+let selO=COUNTRIES[0], selD=COUNTRIES[1];
+let selLyrOut=null, selLyrRet=null;
+let lyrOutActive=false, lyrRetActive=false;
+let tripType='round';
+let currentFlights=[], currentTab='all';
+let autoEnabled=true, alertSent=parseInt(localStorage.getItem('alertCount')||'0');
+let chart=null, cdSecs=86400, cdInt;
+
+// ══════════════════════════════════════════════════════════
+// LAYOVER TOGGLE
+// ══════════════════════════════════════════════════════════
+function toggleLayover(side){
+  if(side==='out'){
+    lyrOutActive=document.getElementById('lyrOutToggle').checked;
+    document.getElementById('lyrOutBody').classList.toggle('open',lyrOutActive);
+    document.getElementById('lyrOutCard').classList.toggle('active-card',lyrOutActive);
+  } else {
+    lyrRetActive=document.getElementById('lyrRetToggle').checked;
+    document.getElementById('lyrRetBody').classList.toggle('open',lyrRetActive);
+    document.getElementById('lyrRetCard').classList.toggle('active-card',lyrRetActive);
+  }
+}
+
+// ══ LAYOVER AUTOCOMPLETE ══
+function filterLayover(side){
+  const el=document.getElementById(side==='out'?'lyrOutInput':'lyrRetInput');
+  const q=el.value.toLowerCase();
+  const list=q.length<1?LAYOVER_CITIES:LAYOVER_CITIES.filter(c=>c.s.includes(q)||c.name.toLowerCase().includes(q));
+  renderLyrDD(side,list);
+}
+function renderLyrDD(side,list){
+  const dd=document.getElementById(side==='out'?'lyrOutDD':'lyrRetDD');
+  const sel=side==='out'?selLyrOut:selLyrRet;
+  dd.innerHTML=list.map(c=>`
+    <div class="dd-item${c.code===sel?.code?' sel':''}" onmousedown="pickLayover('${side}','${c.code}')">
+      <span class="dd-flag">${c.flag}</span>
+      <div class="dd-info"><div class="dd-name">${c.name}</div><div class="dd-airports">${c.airports}</div></div>
+      <span class="dd-code">${c.code}</span>
+    </div>`).join('')||'<div class="dd-item" style="color:var(--muted)">Sin resultados</div>';
+  dd.classList.add('open');
+}
+function openLyrDD(side){filterLayover(side);}
+function closeLyrDD(side,delay){
+  setTimeout(()=>{
+    document.getElementById(side==='out'?'lyrOutDD':'lyrRetDD').classList.remove('open');
+    const s=side==='out'?selLyrOut:selLyrRet;
+    if(s) document.getElementById(side==='out'?'lyrOutInput':'lyrRetInput').value=s.name;
+  },delay);
+}
+function pickLayover(side,code){
+  const c=LAYOVER_CITIES.find(x=>x.code===code)||COUNTRIES.find(x=>x.code===code);
+  if(!c) return;
+  if(side==='out'){selLyrOut=c; document.getElementById('lyrOutInput').value=c.name;}
+  else {selLyrRet=c; document.getElementById('lyrRetInput').value=c.name;}
+  document.getElementById(side==='out'?'lyrOutDD':'lyrRetDD').classList.remove('open');
+}
+
+function syncLyrDates(){
+  // Update route previews
+  document.getElementById('lyrOutFrom').textContent=selO?.code||'???';
+  document.getElementById('lyrOutTo').textContent=selD?.code||'???';
+  document.getElementById('lyrRetFrom').textContent=selD?.code||'???';
+  document.getElementById('lyrRetTo').textContent=selO?.code||'???';
+}
+
+// ══════════════════════════════════════════════════════════
+// COUNTRIES AUTOCOMPLETE
+// ══════════════════════════════════════════════════════════
+function filterC(side){
+  const el=document.getElementById(side==='o'?'originInput':'destInput');
+  const q=el.value.toLowerCase();
+  const list=q.length<1?COUNTRIES:COUNTRIES.filter(c=>c.s.includes(q)||c.name.toLowerCase().includes(q));
+  renderDD(side,list);
+}
+function renderDD(side,list){
+  const dd=document.getElementById(side==='o'?'originDD':'destDD');
+  const sel=side==='o'?selO:selD;
+  dd.innerHTML=list.map(c=>`
+    <div class="dd-item${c.code===sel?.code?' sel':''}" onmousedown="pickC('${side}','${c.code}')">
+      <span class="dd-flag">${c.flag}</span>
+      <div class="dd-info"><div class="dd-name">${c.name}</div><div class="dd-airports">${c.airports}</div></div>
+      <span class="dd-code">${c.code}</span>
+    </div>`).join('')||'<div class="dd-item" style="color:var(--muted)">Sin resultados</div>';
+  dd.classList.add('open');
+}
+function openDD(side){filterC(side);}
+function closeDD(side,delay){
+  setTimeout(()=>{
+    document.getElementById(side==='o'?'originDD':'destDD').classList.remove('open');
+    const s=side==='o'?selO:selD;
+    if(s) document.getElementById(side==='o'?'originInput':'destInput').value=s.name;
+  },delay);
+}
+function pickC(side,code){
+  const c=COUNTRIES.find(x=>x.code===code);
+  if(!c) return;
+  if(side==='o'){selO=c; document.getElementById('originInput').value=c.name;}
+  else {selD=c; document.getElementById('destInput').value=c.name;}
+  document.getElementById(side==='o'?'originDD':'destDD').classList.remove('open');
+  updateBadge(); syncLyrDates();
+}
+function swapRoute(){
+  [selO,selD]=[selD,selO];
+  document.getElementById('originInput').value=selO?.name||'';
+  document.getElementById('destInput').value=selD?.name||'';
+  updateBadge(); syncLyrDates();
+}
+function updateBadge(){
+  if(selO&&selD) document.getElementById('logoBadge').textContent=`✈ ${selO.code} → ${selD.code}`;
+}
+
+// ══ TRIP TYPE & DATES ══
+function setTrip(type,el){
+  tripType=type;
+  document.querySelectorAll('.trip-pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  const rf=document.getElementById('returnDateField');
+  const dr=document.getElementById('dateRow');
+  const lg=document.getElementById('layoverGrid');
+  const rc=document.getElementById('lyrRetCard');
+  if(type==='one'){
+    rf.style.display='none'; dr.classList.add('one-way');
+    lg.classList.add('one-col'); rc.style.display='none';
+    lyrRetActive=false;
+    document.getElementById('lyrRetToggle').checked=false;
+    document.getElementById('lyrRetBody').classList.remove('open');
+    document.getElementById('lyrRetCard').classList.remove('active-card');
+  } else {
+    rf.style.display=''; dr.classList.remove('one-way');
+    lg.classList.remove('one-col'); rc.style.display='';
+  }
+}
+function validateDates(){
+  const dep=document.getElementById('departDate').value;
+  const ret=document.getElementById('returnDate').value;
+  if(dep&&ret&&ret<dep){
+    const d=new Date(dep); d.setDate(d.getDate()+7);
+    document.getElementById('returnDate').value=d.toISOString().split('T')[0];
+    showToast('📅 Fecha de regreso ajustada automáticamente','');
+  }
+}
+function fmt(v){
+  if(!v) return '—';
+  const d=new Date(v+'T12:00:00');
+  return d.toLocaleDateString('es-GT',{day:'numeric',month:'short',year:'numeric'});
+}
+function resetForm(){
+  selO=COUNTRIES[0]; selD=COUNTRIES[1];
+  selLyrOut=null; selLyrRet=null;
+  lyrOutActive=false; lyrRetActive=false;
+  document.getElementById('originInput').value='Guatemala';
+  document.getElementById('destInput').value='Chile';
+  document.getElementById('lyrOutInput').value='';
+  document.getElementById('lyrRetInput').value='';
+  document.getElementById('lyrOutToggle').checked=false;
+  document.getElementById('lyrRetToggle').checked=false;
+  document.getElementById('lyrOutBody').classList.remove('open');
+  document.getElementById('lyrRetBody').classList.remove('open');
+  document.getElementById('lyrOutCard').classList.remove('active-card');
+  document.getElementById('lyrRetCard').classList.remove('active-card');
+  const d1=new Date(); d1.setDate(d1.getDate()+1);
+  const d2=new Date(); d2.setDate(d2.getDate()+8);
+  document.getElementById('departDate').value=d1.toISOString().split('T')[0];
+  document.getElementById('returnDate').value=d2.toISOString().split('T')[0];
+  document.getElementById('flightsList').innerHTML='';
+  document.getElementById('bestDeal').style.display='none';
+  document.getElementById('tabsRow').classList.remove('vis');
+  document.getElementById('routeStrip').classList.remove('vis');
+  document.getElementById('histSec').classList.remove('vis');
+  document.getElementById('alertSec').classList.remove('vis');
+  document.getElementById('waBox').classList.remove('vis');
+  document.getElementById('cdBox').classList.remove('vis');
+  updateBadge(); syncLyrDates();
+}
+
+// ══════════════════════════════════════════════════════════
+// AIRLINES & FLIGHT GENERATION
+// ══════════════════════════════════════════════════════════
+const AIRLINES=[
+  {name:'Avianca',          ico:'🇨🇴',url:(o,d)=>`https://www.avianca.com/es/vuelos/resultados/?origin=${o}&destination=${d}`},
+  {name:'LATAM',            ico:'🔵',url:(o,d)=>`https://www.latamairlines.com/gt/es/oferta-vuelos?origin=${o}&destination=${d}`},
+  {name:'Copa Airlines',    ico:'🦅',url:(o,d)=>`https://www.copaair.com/es-gs/buscar-vuelos/?origin=${o}&destination=${d}`},
+  {name:'Aeroméxico',       ico:'🇲🇽',url:(o,d)=>`https://aeromexico.com/es-gt/vuelos?origin=${o}&destination=${d}`},
+  {name:'American Airlines',ico:'🦅',url:(o,d)=>`https://www.aa.com/booking/find-flights?originAirport=${o}&destinationAirport=${d}`},
+  {name:'United Airlines',  ico:'✈️',url:(o,d)=>`https://www.united.com/en/gt/flights/search?origin=${o}&destination=${d}`},
+];
+const STOP_OPTS=[
+  {label:'Directo',   via:'',             durAdd:0,  type:'direct', mult:1.35},
+  {label:'1 escala',  via:'Bogotá (BOG)', durAdd:180,type:'escala', mult:1.0},
+  {label:'1 escala',  via:'Lima (LIM)',   durAdd:300,type:'escala', mult:0.95},
+  {label:'1 escala',  via:'Panamá (PTY)',durAdd:120, type:'escala', mult:1.05},
+  {label:'1 escala',  via:'Miami (MIA)',  durAdd:360,type:'escala', mult:0.88},
+  {label:'1 escala',  via:'Ciudad de México (MEX)',durAdd:420,type:'escala',mult:0.9},
+  {label:'2 escalas', via:'BOG + LIM',   durAdd:600,type:'escala', mult:0.75},
+];
+const DIST={'GUA-SCL':11,'GUA-MEX':3,'GUA-BOG':4,'GUA-MIA':2,'MEX-SCL':9,'BOG-SCL':5,'LIM-SCL':3,'EZE-SCL':2,'MAD-SCL':14,'GRU-SCL':4};
+function baseH(o,d){const k=`${o.code}-${d.code}`,k2=`${d.code}-${o.code}`;return DIST[k]||DIST[k2]||10;}
+function basePx(o,d){const h=baseH(o,d),b=80+h*45;return{mn:b*.85,mx:b*1.6};}
+function getPx(mn,mx,seed){const v=Math.sin(seed*1.3)*.18,b=mn+(mx-mn)*Math.abs(Math.sin(seed*2.1));return Math.round(b*(1+v));}
+
+// Format minutes into "Xh Ym"
+function minsToHM(total){const h=Math.floor(total/60),m=total%60;return m>0?`${h}h ${m}m`:`${h}h`;}
+
+// Build layover description
+function getLyrLabel(side){
+  if(side==='out' && lyrOutActive && selLyrOut){
+    const dur=document.getElementById('lyrOutDur').value;
+    return `${selLyrOut.code} (${dur})`;
+  }
+  if(side==='ret' && lyrRetActive && selLyrRet){
+    const dur=document.getElementById('lyrRetDur').value;
+    return `${selLyrRet.code} (${dur})`;
+  }
+  return null;
+}
+
+function genFlights(){
+  const dep=document.getElementById('departDate').value;
+  const ret=document.getElementById('returnDate').value;
+  const {mn,mx}=basePx(selO,selD);
+  const tm=tripType==='round'?1.82:1;
+  const h=baseH(selO,selD);
+  const today=new Date().getDate();
+  const lyrOutLabel=getLyrLabel('out');
+  const lyrRetLabel=getLyrLabel('ret');
+
+  const flights=[];
+  for(let i=0;i<12;i++){
+    const al=AIRLINES[i%AIRLINES.length];
+    const sc=STOP_OPTS[i%STOP_OPTS.length];
+    const seed=today+i*7+selO.code.charCodeAt(0)+selD.code.charCodeAt(0);
+    // Price modifier for layovers
+    let lyrMult=1;
+    if(lyrOutActive && selLyrOut) lyrMult*=0.93; // slight discount for specific layover
+    if(lyrRetActive && selLyrRet) lyrMult*=0.95;
+    const price=Math.round(getPx(mn,mx,seed)*sc.mult*tm*lyrMult);
+    const oi=selO.iata[0], di=selD.iata[0];
+    // Duration: base + stop add + layover time
+    const lyrOutMins=lyrOutActive?durationToMins(document.getElementById('lyrOutDur').value):0;
+    const lyrRetMins=(lyrRetActive&&tripType==='round')?durationToMins(document.getElementById('lyrRetDur').value):0;
+    const outMins=h*60+sc.durAdd+lyrOutMins;
+    const retMins=tripType==='round'?h*60+lyrRetMins:0;
+    flights.push({
+      id:i, airline:al,
+      // Outbound leg
+      outStops: lyrOutActive && selLyrOut ? `1 escala` : sc.label,
+      outVia:   lyrOutActive && selLyrOut ? `${selLyrOut.name} (${selLyrOut.code})` : sc.via,
+      outDur:   minsToHM(outMins),
+      outLyr:   lyrOutLabel,
+      type: (lyrOutActive && selLyrOut) || sc.type==='escala' ? 'escala' : 'direct',
+      // Return leg
+      retStops: (lyrRetActive && selLyrRet && tripType==='round') ? '1 escala' : (tripType==='round'?sc.label:''),
+      retVia:   (lyrRetActive && selLyrRet && tripType==='round') ? `${selLyrRet.name} (${selLyrRet.code})` : (tripType==='round'?sc.via:''),
+      retDur:   tripType==='round' ? minsToHM(retMins) : '',
+      retLyr:   tripType==='round'?getLyrLabel('ret'):null,
+      price, dep:fmt(dep), ret:fmt(ret),
+      seats:Math.floor(Math.random()*8)+1,
+      isNew:Math.random()>.72,
+      url:al.url(oi,di),
+    });
+  }
+  flights.sort((a,b)=>a.price-b.price);
+  return flights;
+}
+
+function durationToMins(v){
+  if(v==='1h30m') return 90;
+  const match=v.match(/(\d+)h/);
+  return match?parseInt(match[1])*60:180;
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════
+function showStrip(){
+  document.getElementById('rsOF').textContent=selO.flag;
+  document.getElementById('rsOC').textContent=selO.code;
+  document.getElementById('rsDF').textContent=selD.flag;
+  document.getElementById('rsDC').textContent=selD.code;
+  document.getElementById('rsDep').textContent=fmt(document.getElementById('departDate').value);
+  document.getElementById('rsRet').textContent=fmt(document.getElementById('returnDate').value);
+  document.getElementById('rsRetWrap').style.display=tripType==='round'?'':'none';
+  // Layover summary in strip
+  const hasLyr=lyrOutActive&&selLyrOut || (lyrRetActive&&selLyrRet&&tripType==='round');
+  document.getElementById('rsLyrSep').style.display=hasLyr?'':'none';
+  document.getElementById('rsLyrInfo').style.display=hasLyr?'':'none';
+  if(hasLyr){
+    const outT=lyrOutActive&&selLyrOut?`🔀 Ida: ${selLyrOut.flag} ${selLyrOut.code} (${document.getElementById('lyrOutDur').value})`:'';
+    const retT=lyrRetActive&&selLyrRet&&tripType==='round'?`🔀 Regreso: ${selLyrRet.flag} ${selLyrRet.code} (${document.getElementById('lyrRetDur').value})`:'';
+    document.getElementById('rsLyrOut').innerHTML=outT?`<span>${outT}</span>`:'';
+    document.getElementById('rsLyrRet').innerHTML=retT?`<span>${retT}</span>`:'';
+  }
+  document.getElementById('routeStrip').classList.add('vis');
+}
+
+function renderBD(fl){
+  const b=fl[0], w=fl[fl.length-1], saved=w.price-b.price;
+  const bd=document.getElementById('bestDeal');
+  bd.style.display='';
+  const lyrOutBadge=lyrOutActive&&selLyrOut?`<span class="lyr-badge">🔀 Escala ida: ${selLyrOut.code}</span>`:'';
+  const lyrRetBadge=lyrRetActive&&selLyrRet&&tripType==='round'?`<span class="lyr-badge ret">🔀 Escala regreso: ${selLyrRet.code}</span>`:'';
+  bd.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
+      <div>
+        <div style="font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">${b.airline.ico} ${b.airline.name} · ${b.outStops}</div>
+        <div class="bd-price"><sup>USD </sup>${b.price.toLocaleString()}</div>
+        <div class="bd-chips">
+          <div class="bdc">✈ <span>${selO.code} → ${selD.code}</span></div>
+          <div class="bdc">📅 <span>${b.dep}${tripType==='round'?' → '+b.ret:''}</span></div>
+          <div class="bdc">⏱ Ida: <span>${b.outDur}</span></div>
+          ${tripType==='round'?`<div class="bdc">⏱ Regreso: <span>${b.retDur}</span></div>`:''}
+          <div class="bdc">🛤 <span>${b.outVia||'Vuelo directo'}</span></div>
+          <div class="bdc">💺 <span>${b.seats} asientos</span></div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">${lyrOutBadge}${lyrRetBadge}</div>
+        <div style="margin-top:10px;font-size:12px;color:var(--accent3);">✅ Ahorras ~USD ${saved.toLocaleString()} vs el precio más alto</div>
+      </div>
+      <div style="text-align:right;">
+        <button class="btn-search" style="font-size:12px;padding:12px 20px;" id="bdBookBtn">🛒 Reservar ahora</button>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px;">→ ${b.airline.name}</div>
+      </div>
+    </div>`;
+  document.getElementById('bdBookBtn').addEventListener('click', () => window.open(b.url, '_blank'));
+}
+
+function pcls(p,mn,mx){const r=(p-mn)/(mx-mn||1);return r<.33?'pl':r<.66?'pm':'ph';}
+
+function renderFL(fl){
+  const filtered=currentTab==='all'?fl:currentTab==='direct'?fl.filter(f=>f.type==='direct'):fl.filter(f=>f.type==='escala');
+  if(!filtered.length){
+    document.getElementById('flightsList').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">No hay vuelos para este filtro.</div>';
+    return;
+  }
+  const mn=filtered[0].price, mx=filtered[filtered.length-1].price;
+  const tl=tripType==='round'?'ida y vuelta':'solo ida';
+
+  document.getElementById('flightsList').innerHTML=filtered.map((f,i)=>{
+    const lyrOutTag=f.outLyr?`<div class="layover-tag">🔀 Escala ida: ${f.outLyr}</div>`:'';
+    const lyrRetTag=(f.retLyr&&tripType==='round')?`<div class="layover-tag ret-tag">🔀 Escala regreso: ${f.retLyr}</div>`:'';
+    const furl=f.url;
+    const outLeg=`
+      <div class="fc-leg">
+        <div class="al-icon">${f.airline.ico}</div>
+        <div>
+          <div class="fc-top">
+            <span class="al-name">${f.airline.name}</span>
+            ${i===0?'<span class="badge bb">Mejor</span>':''}
+            ${f.isNew?'<span class="badge bn">Nuevo</span>':''}
+            ${f.seats<=3?`<span class="badge bh">¡${f.seats}!</span>`:''}
+          </div>
+          <div class="fc-route">
+            <span class="fc-code">${selO.code}</span>
+            <div class="rl-wrap">
+              <div class="r-dots"><div class="r-dot"></div><div class="r-line"></div><span style="font-size:12px">✈</span><div class="r-line"></div><div class="r-dot"></div></div>
+              <div class="r-stops">${f.outStops}${f.outVia?' · '+f.outVia:''}</div>
+            </div>
+            <span class="fc-code">${selD.code}</span>
+          </div>
+          <div class="fc-meta">📅 <span>${f.dep}</span> · ⏱ <span>${f.outDur}</span></div>
+          ${lyrOutTag}
+        </div>
+        <div class="fc-right">
+          <div class="fc-price ${pcls(f.price,mn,mx)}">USD ${f.price.toLocaleString()}</div>
+          <div class="fc-plabel">${tl}</div>
+          <button class="book-btn" data-url="${encodeURIComponent(furl)}">Reservar →</button>
+        </div>
+      </div>`;
+    const retLeg=tripType==='round'?`
+      <div class="leg-divider">↩ Vuelo de regreso</div>
+      <div class="fc-leg">
+        <div class="al-icon">${f.airline.ico}</div>
+        <div>
+          <div class="fc-top"><span class="al-name">${f.airline.name}</span></div>
+          <div class="fc-route">
+            <span class="fc-code">${selD.code}</span>
+            <div class="rl-wrap">
+              <div class="r-dots"><div class="r-dot"></div><div class="r-line"></div><span style="font-size:12px">✈</span><div class="r-line"></div><div class="r-dot"></div></div>
+              <div class="r-stops">${f.retStops}${f.retVia?' · '+f.retVia:''}</div>
+            </div>
+            <span class="fc-code">${selO.code}</span>
+          </div>
+          <div class="fc-meta">📅 <span>${f.ret}</span> · ⏱ <span>${f.retDur}</span></div>
+          ${lyrRetTag}
+        </div>
+        <div class="fc-right" style="visibility:hidden"><div class="fc-price">—</div></div>
+      </div>`:'';
+    return `<div class="flight-card${i===0?' cheapest':''}" data-url="${encodeURIComponent(furl)}">${outLeg}${retLeg}</div>`;
+  }).join('');
+
+  // Single delegated click handler (replaces any previous)
+  document.getElementById('flightsList').onclick = function(e){
+    const btn = e.target.closest('.book-btn');
+    if(btn){
+      e.stopPropagation();
+      window.open(decodeURIComponent(btn.dataset.url), '_blank');
+      return;
+    }
+    const card = e.target.closest('.flight-card');
+    if(card) window.open(decodeURIComponent(card.dataset.url), '_blank');
+  };
+}
+
+function renderChart(){
+  if(chart) chart.destroy();
+  const {mn,mx}=basePx(selO,selD);
+  const now=new Date(),labels=[],data=[];
+  for(let i=13;i>=0;i--){
+    const d=new Date(now); d.setDate(d.getDate()-i);
+    labels.push(d.toLocaleDateString('es',{month:'short',day:'numeric'}));
+    data.push(Math.round(mn*.85+(i*3.5)+Math.sin(i*1.9+selO.code.charCodeAt(0))*(mx-mn)*.1));
+  }
+  const ctx=document.getElementById('priceChart').getContext('2d');
+  chart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Precio mínimo (USD)',data,borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,0.06)',borderWidth:2,pointRadius:3,pointBackgroundColor:'#00d4ff',fill:true,tension:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`USD ${c.parsed.y.toLocaleString()}`},backgroundColor:'#111827',borderColor:'#1e2d4a',borderWidth:1,titleColor:'#6b7fa3',bodyColor:'#e8f0fe'}},scales:{x:{grid:{color:'rgba(30,45,74,.5)'},ticks:{color:'#6b7fa3',font:{size:10}}},y:{grid:{color:'rgba(30,45,74,.5)'},ticks:{color:'#6b7fa3',font:{size:10},callback:v=>'USD '+v}}}}});
+}
+
+// ══ FETCH ══
+function fetchFlights(){
+  if(!selO||!selD){showToast('⚠️ Selecciona origen y destino','');return;}
+  if(selO.code===selD.code){showToast('⚠️ Origen y destino no pueden ser iguales','');return;}
+  if(!document.getElementById('departDate').value){showToast('⚠️ Selecciona una fecha de salida','');return;}
+  if(tripType==='round'&&!document.getElementById('returnDate').value){showToast('⚠️ Selecciona una fecha de regreso','');return;}
+  if(lyrOutActive&&!selLyrOut){showToast('⚠️ Selecciona una ciudad de escala para la ida','');return;}
+  if(lyrRetActive&&tripType==='round'&&!selLyrRet){showToast('⚠️ Selecciona una ciudad de escala para el regreso','');return;}
+
+  const bd=document.getElementById('bestDeal');
+  bd.style.display=''; bd.innerHTML='<div class="loading"><div class="spinner"></div> Buscando mejores precios...</div>';
+  document.getElementById('flightsList').innerHTML='<div class="loading"><div class="spinner"></div> Consultando aerolíneas...</div>';
+  document.getElementById('tabsRow').classList.remove('vis');
+
+  setTimeout(()=>{
+    currentFlights=genFlights();
+    const ts=new Date().toLocaleString('es-GT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('lastUpdate').textContent=ts;
+    showStrip();
+    renderBD(currentFlights);
+    document.getElementById('tabsRow').classList.add('vis');
+    currentTab='all';
+    document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+    renderFL(currentFlights);
+    document.getElementById('histSec').classList.add('vis');
+    renderChart();
+    document.getElementById('alertSec').classList.add('vis');
+    document.getElementById('waBox').classList.add('vis');
+    document.getElementById('cdBox').classList.add('vis');
+    document.getElementById('waPhoneDisplay').textContent=document.getElementById('waNumber').value;
+    let ph=JSON.parse(localStorage.getItem('ph')||'[]');
+    ph.push({t:ts,p:currentFlights[0].price});
+    if(ph.length>30) ph.shift();
+    localStorage.setItem('ph',JSON.stringify(ph));
+    checkThreshold();
+
+    let msg=`✅ ${currentFlights.length} vuelos · ${selO.code} → ${selD.code}`;
+    if(lyrOutActive&&selLyrOut) msg+=` · Escala ida: ${selLyrOut.code}`;
+    if(lyrRetActive&&selLyrRet&&tripType==='round') msg+=` · Escala regreso: ${selLyrRet.code}`;
+    showToast(msg,'success');
+  },1800);
+}
+
+function switchTab(tab,el){
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(currentFlights.length) renderFL(currentFlights);
+}
+
+// ══ WHATSAPP ══
+function checkThreshold(){
+  if(!currentFlights.length) return;
+  const t=parseInt(document.getElementById('priceThreshold').value);
+  if(currentFlights[0].price<=t) sendWA(true);
+}
+function buildMsg(auto){
+  if(!currentFlights.length) return '';
+  const b=currentFlights[0];
+  const tl=tripType==='round'?'Ida y vuelta':'Solo ida';
+  const now=new Date().toLocaleString('es-GT');
+  const lyrOutLine=lyrOutActive&&selLyrOut?`\n🔀 Escala ida: ${selLyrOut.flag} ${selLyrOut.name} (${selLyrOut.code}) · ${document.getElementById('lyrOutDur').value}`:'';
+  const lyrRetLine=lyrRetActive&&selLyrRet&&tripType==='round'?`\n🔀 Escala regreso: ${selLyrRet.flag} ${selLyrRet.name} (${selLyrRet.code}) · ${document.getElementById('lyrRetDur').value}`:'';
+  return `✈️ *ALERTA DE PRECIO*\n${auto?'🔔 _Precio por debajo de tu umbral_':'📊 _Reporte de precios actual_'}\n\n🗺 *Ruta: ${selO.flag} ${selO.name} → ${selD.flag} ${selD.name}*\n💰 *Mejor precio: USD ${b.price.toLocaleString()}*\n🏷 Tipo: ${tl}\n🛫 Aerolínea: ${b.airline.name}\n📅 Salida: ${b.dep}${tripType==='round'?'\n📅 Regreso: '+b.ret:''}\n⏱ Duración ida: ${b.outDur}${tripType==='round'?'\n⏱ Duración regreso: '+b.retDur:''}\n🛤 Vuelo ida: ${b.outStops}${b.outVia?' vía '+b.outVia:''}${lyrOutLine}${lyrRetLine?'\n🛤 Vuelo regreso: '+b.retStops+(b.retVia?' vía '+b.retVia:'')+lyrRetLine:''}\n💺 Asientos: ${b.seats}\n\n🔗 Reservar: ${b.url}\n\n⏰ Actualizado: ${now}\n🤖 _Rastreador automático de vuelos_`;
+}
+function sendWA(auto){
+  const msg=buildMsg(auto);
+  if(!msg){showToast('⚠️ Primero busca vuelos','');return;}
+  const num=document.getElementById('waNumber').value.replace(/[^0-9]/g,'');
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`,'_blank');
+  alertSent++; localStorage.setItem('alertCount',alertSent);
+  document.getElementById('alertCount').textContent=alertSent;
+  showToast('💬 WhatsApp abierto con el mensaje listo','whatsapp');
+}
+function testWA(){
+  const num=document.getElementById('waNumber').value.replace(/[^0-9]/g,'');
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent('✈️ *Prueba · Rastreador de Vuelos*\n\n¡Todo funciona correctamente! 🟢\n\nRecibirás alertas cuando el precio baje de tu umbral.\n\n_Rastreador de vuelos automático_')}`,'_blank');
+  showToast('📱 Mensaje de prueba enviado','whatsapp');
+}
+function copyWA(){
+  const msg=buildMsg(false);
+  if(!msg){showToast('⚠️ Primero busca vuelos','');return;}
+  navigator.clipboard.writeText(msg).then(()=>showToast('📋 Mensaje copiado','success'));
+}
+function saveAlert(){
+  const t=document.getElementById('priceThreshold').value;
+  const p=document.getElementById('waNumber').value;
+  localStorage.setItem('priceThreshold',t);
+  localStorage.setItem('waNumber',p);
+  document.getElementById('waPhoneDisplay').textContent=p;
+  showToast(`✅ Alerta guardada: USD ${t} · ${p}`,'success');
+}
+
+// ══ COUNTDOWN ══
+function startCD(){
+  const sv=localStorage.getItem('lastFetch');
+  if(sv) cdSecs=Math.max(0,86400-Math.floor((Date.now()-parseInt(sv))/1000));
+  clearInterval(cdInt);
+  cdInt=setInterval(()=>{
+    if(!autoEnabled) return;
+    cdSecs--;
+    if(cdSecs<=0){cdSecs=86400;localStorage.setItem('lastFetch',Date.now());if(currentFlights.length)fetchFlights();}
+    const el=document.getElementById('countdown');
+    if(el) el.textContent=`${String(Math.floor(cdSecs/3600)).padStart(2,'0')}:${String(Math.floor((cdSecs%3600)/60)).padStart(2,'0')}:${String(cdSecs%60).padStart(2,'0')}`;
+  },1000);
+}
+function toggleAuto(){
+  autoEnabled=!autoEnabled;
+  document.getElementById('autoTog').classList.toggle('on',autoEnabled);
+  showToast(autoEnabled?'🔄 Auto-actualización activada':'⏸ Auto-actualización pausada','');
+}
+function showToast(msg,type){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className=`toast ${type} show`;
+  setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+// ══ INIT ══
+window.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('originInput').value='Guatemala';
+  document.getElementById('destInput').value='Chile';
+  const d1=new Date(); d1.setDate(d1.getDate()+1);
+  const d2=new Date(); d2.setDate(d2.getDate()+8);
+  document.getElementById('departDate').value=d1.toISOString().split('T')[0];
+  document.getElementById('returnDate').value=d2.toISOString().split('T')[0];
+  const st=localStorage.getItem('priceThreshold'); if(st) document.getElementById('priceThreshold').value=st;
+  const sp=localStorage.getItem('waNumber'); if(sp) document.getElementById('waNumber').value=sp;
+  const sc=localStorage.getItem('alertCount'); if(sc) document.getElementById('alertCount').textContent=sc;
+  syncLyrDates(); updateBadge(); startCD(); localStorage.setItem('lastFetch',Date.now());
+});
+</script>
+</body>
+</html>
